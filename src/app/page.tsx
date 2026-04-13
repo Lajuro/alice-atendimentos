@@ -292,7 +292,7 @@ export default function Home() {
             disabled={totalHoje === 0}
             className="px-3 py-2 sm:px-4 bg-white/20 hover:bg-white/30 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg text-xs sm:text-sm transition-colors whitespace-nowrap"
           >
-            Desfazer último <kbd className="hidden sm:inline ml-1 opacity-60 text-[10px] border border-white/30 rounded px-1">Z</kbd>
+            Desfazer último <kbd className="inline ml-1 opacity-60 text-[10px] border border-white/30 rounded px-1">Z</kbd>
           </button>
           {perfil?.onboardingCompleto && (
             <button
@@ -307,7 +307,7 @@ export default function Home() {
                 <Coffee className="w-3.5 h-3.5" />
                 {almocoEmAndamento ? "Encerrar almoço" : "Iniciar almoço"}
               </span>
-              <kbd className="hidden sm:inline ml-1 opacity-60 text-[10px] border border-white/30 rounded px-1">L</kbd>
+              <kbd className="inline ml-1 opacity-60 text-[10px] border border-white/30 rounded px-1">L</kbd>
             </button>
           )}
         </div>
@@ -402,7 +402,7 @@ export default function Home() {
                 </svg>
               </div>
               {idx < 9 && (
-                <kbd className="hidden sm:flex absolute bottom-2 right-3 w-5 h-5 rounded text-[10px] font-mono bg-alice-gray-100 text-alice-gray-400 items-center justify-center">{idx + 1}</kbd>
+                <kbd className="flex absolute bottom-2 right-3 w-5 h-5 rounded text-[10px] font-mono bg-alice-gray-100 text-alice-gray-400 items-center justify-center">{idx + 1}</kbd>
               )}
             </button>
           );
@@ -733,7 +733,7 @@ export default function Home() {
       {/* Floating help button (desktop) */}
       <button
         onClick={() => setShowHelp(true)}
-        className="hidden sm:flex fixed bottom-5 right-5 z-40 w-10 h-10 rounded-full bg-alice-black text-alice-white hover:bg-alice-primary items-center justify-center shadow-lg transition-colors text-lg font-bold"
+        className="flex fixed bottom-5 right-5 z-40 w-10 h-10 rounded-full bg-alice-black text-alice-white hover:bg-alice-primary items-center justify-center shadow-lg transition-colors text-lg font-bold"
         title="Atalhos do teclado (?)"
       >
         ?
