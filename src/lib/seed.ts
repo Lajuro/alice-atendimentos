@@ -30,10 +30,11 @@ export function gerarDadosExemplo(): RegistroAtendimento[] {
   // Pesos por tipo (simula distribuição real)
   const pesos = [
     { tipoId: tipos[0].id, peso: 0.08 }, // Chat em branco (raro)
-    { tipoId: tipos[1].id, peso: 0.12 }, // Emergência
-    { tipoId: tipos[2].id, peso: 0.25 }, // Renovação de receita
-    { tipoId: tipos[3].id, peso: 0.2 },  // Pedido de Exame
-    { tipoId: tipos[4].id, peso: 0.35 }, // Sintomas (mais comum)
+    { tipoId: tipos[1].id, peso: 0.1 },  // Emergência
+    { tipoId: tipos[2].id, peso: 0.22 }, // Renovação de receita
+    { tipoId: tipos[3].id, peso: 0.18 }, // Pedido de Exame
+    { tipoId: tipos[4].id, peso: 0.3 },  // Sintomas (mais comum)
+    { tipoId: tipos[5].id, peso: 0.12 }, // Administrativo
   ];
 
   function tipoAleatorio(): string {

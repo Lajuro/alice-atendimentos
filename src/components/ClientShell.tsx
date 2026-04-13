@@ -42,6 +42,13 @@ export default function ClientShell({ children }: { children: React.ReactNode })
       }
     }
 
+    // Never show banner if already running as installed PWA or dismissed this session
+    const isStandalone = globalThis.matchMedia("(display-mode: standalone)").matches
+      || ("standalone" in navigator && (navigator as unknown as { standalone: boolean }).standalone);
+    const dismissedThisSession = sessionStorage.getItem("pwa-banner-dismissed") === "1";
+
+    if (isStandalone || dismissedThisSession) return;
+
     const handler = (e: Event) => {
       e.preventDefault();
       setInstallPrompt(e);
@@ -180,9 +187,9 @@ export default function ClientShell({ children }: { children: React.ReactNode })
 
       {/* PWA install banner */}
       {showInstallBanner && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl px-5 py-3 flex items-center gap-3 max-w-sm w-[calc(100%-2rem)]">
-          <Smartphone className="w-6 h-6 text-alice-pink shrink-0" />
-          <p className="text-sm flex-1 text-gray-700 dark:text-gray-200">
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-alice-primary rounded-2xl shadow-xl px-5 py-3 flex items-center gap-3 max-w-sm w-[calc(100%-2rem)]">
+          <Smartphone className="w-6 h-6 text-white/80 shrink-0" />
+          <p className="text-sm flex-1 text-white/90">
             Instale o app para acesso rápido e offline!
           </p>
           <button
@@ -193,13 +200,16 @@ export default function ClientShell({ children }: { children: React.ReactNode })
               setShowInstallBanner(false);
               setInstallPrompt(null);
             }}
-            className="px-3 py-1.5 bg-alice-pink text-white text-sm font-semibold rounded-lg hover:opacity-90 transition shrink-0"
+            className="px-3 py-1.5 bg-white text-alice-primary text-sm font-semibold rounded-lg hover:bg-white/90 transition shrink-0"
           >
             Instalar
           </button>
           <button
-            onClick={() => setShowInstallBanner(false)}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
+            onClick={() => {
+              sessionStorage.setItem("pwa-banner-dismissed", "1");
+              setShowInstallBanner(false);
+            }}
+            className="text-white/60 hover:text-white transition"
             aria-label="Fechar"
           >
             <X className="w-4 h-4" />

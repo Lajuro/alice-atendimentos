@@ -76,4 +76,5 @@ export const TIPOS_PADRAO: TipoAtendimento[] = [
   { id: "renovacao-receita", nome: "Renovação de receita", cor: "#3B82F6" },
   { id: "pedido-exame", nome: "Pedido de Exame", cor: "#F59E0B" },
   { id: "sintomas", nome: "Sintomas", cor: "#10B981" },
+  { id: "administrativo", nome: "Administrativo", cor: "#8B5CF6" },
 ];
