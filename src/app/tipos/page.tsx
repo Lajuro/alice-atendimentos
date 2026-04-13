@@ -4,10 +4,11 @@ import { useAtendimentos } from "@/hooks/useAtendimentos";
 import { TipoAtendimento } from "@/lib/types";
 import { getMeta, salvarMeta } from "@/lib/storage";
 import { useState, useEffect } from "react";
-import { Target } from "lucide-react";
+import { Target, Sparkles } from "lucide-react";
 import { Select } from "@/components/ui/Select";
 import { NumberInput } from "@/components/ui/NumberInput";
 import { ColorPicker } from "@/components/ui/ColorPicker";
+import { getIntroHabilitada, salvarIntroHabilitada } from "@/lib/storage";
 
 export default function ConfiguracoesPage() {
   const { tipos, config, atualizarTipos, salvarConfig, loaded } = useAtendimentos();
@@ -19,6 +20,7 @@ export default function ConfiguracoesPage() {
   const [horaInicio, setHoraInicio] = useState(config.horaInicio);
   const [horaFim, setHoraFim] = useState(config.horaFim);
   const [metaDiaria, setMetaDiaria] = useState(0);
+  const [introHabilitada, setIntroHabilitada] = useState(true);
 
   useEffect(() => {
     setHoraInicio(config.horaInicio);
@@ -27,6 +29,7 @@ export default function ConfiguracoesPage() {
 
   useEffect(() => {
     setMetaDiaria(getMeta().metaDiaria);
+    setIntroHabilitada(getIntroHabilitada());
   }, []);
 
   if (!loaded) return null;
@@ -161,6 +164,45 @@ export default function ConfiguracoesPage() {
             Meta atual: {metaOriginal} atendimentos/dia
           </p>
         )}
+      </div>
+
+      {/* Preferências */}
+      <div className="bg-card border border-alice-gray-100 rounded-xl p-4 sm:p-5 space-y-3 sm:space-y-4">
+        <div>
+          <h2 className="text-base sm:text-lg font-bold inline-flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4" />
+            Preferências
+          </h2>
+          <p className="text-alice-gray-400 text-xs sm:text-sm mt-0.5">
+            Personalize o comportamento do aplicativo
+          </p>
+        </div>
+        <label className="flex items-center justify-between gap-3 cursor-pointer group">
+          <div>
+            <span className="text-sm font-medium">Tela de boas-vindas</span>
+            <p className="text-[10px] sm:text-xs text-alice-gray-300 mt-0.5">
+              Exibir saudação animada ao abrir o aplicativo
+            </p>
+          </div>
+          <button
+            role="switch"
+            aria-checked={introHabilitada}
+            onClick={() => {
+              const next = !introHabilitada;
+              setIntroHabilitada(next);
+              salvarIntroHabilitada(next);
+            }}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+              introHabilitada ? "bg-alice-primary" : "bg-alice-gray-200"
+            }`}
+          >
+            <span
+              className={`inline-block h-4.5 w-4.5 rounded-full bg-white shadow-sm transition-transform ${
+                introHabilitada ? "translate-x-5.5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        </label>
       </div>
 
       {/* Tipos de atendimento */}

@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import Sidebar from "./Sidebar";
 import Onboarding from "./Onboarding";
+import WelcomeIntro from "./WelcomeIntro";
 import type { PerfilUsuario } from "@/lib/types";
-import { getPerfil, salvarPerfil, salvarConfig, getSidebarMinimized, salvarSidebarMinimized } from "@/lib/storage";
+import { getPerfil, salvarPerfil, salvarConfig, getSidebarMinimized, salvarSidebarMinimized, getIntroHabilitada } from "@/lib/storage";
 import { Smartphone, X } from "lucide-react";
 
 export default function ClientShell({ children }: { children: React.ReactNode }) {
@@ -17,6 +18,7 @@ export default function ClientShell({ children }: { children: React.ReactNode })
   const [dark, setDark] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [showIntro, setShowIntro] = useState(false);
 
   /* Register service worker & capture install prompt */
   useEffect(() => {
@@ -74,6 +76,14 @@ export default function ClientShell({ children }: { children: React.ReactNode })
     };
   }, []);
 
+  // Show welcome intro once per session after profile is loaded
+  useEffect(() => {
+    if (loaded && perfil?.onboardingCompleto && !editandoPerfil && getIntroHabilitada()) {
+      setShowIntro(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
+
   const toggleSidebar = useCallback(() => setSidebarOpen((o) => !o), []);
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const toggleMinimized = useCallback(() => setMinimized((m) => {
@@ -119,6 +129,9 @@ export default function ClientShell({ children }: { children: React.ReactNode })
 
   return (
     <>
+      {showIntro && perfil && (
+        <WelcomeIntro nome={perfil.nome} onDone={() => setShowIntro(false)} />
+      )}
       {showOnboarding && (
         <Onboarding
           onComplete={handleOnboardingComplete}

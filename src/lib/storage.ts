@@ -13,6 +13,7 @@ const STORAGE_KEYS = {
   META: "alice-meta",
   NOTAS_DIA: "alice-notas-dia",
   SIDEBAR_MINIMIZED: "alice-sidebar-minimized",
+  INTRO_HABILITADA: "alice-intro-habilitada",
 } as const;
 
 function getItem<T>(key: string, fallback: T): T {
@@ -404,4 +405,26 @@ export function getSidebarMinimized(): boolean {
 
 export function salvarSidebarMinimized(minimized: boolean) {
   setItem(STORAGE_KEYS.SIDEBAR_MINIMIZED, minimized);
+}
+
+// --- Intro / Boas-vindas ---
+export function getIntroHabilitada(): boolean {
+  return getItem(STORAGE_KEYS.INTRO_HABILITADA, true);
+}
+
+export function salvarIntroHabilitada(habilitada: boolean) {
+  setItem(STORAGE_KEYS.INTRO_HABILITADA, habilitada);
+}
+
+export function getResumoDiaAnterior(): { total: number; data: string } | null {
+  const ontem = new Date();
+  ontem.setDate(ontem.getDate() - 1);
+  const y = ontem.getFullYear();
+  const m = String(ontem.getMonth() + 1).padStart(2, "0");
+  const d = String(ontem.getDate()).padStart(2, "0");
+  const dataOntem = `${y}-${m}-${d}`;
+  const registros = getRegistros();
+  const total = registros.filter((r) => toLocalDateKey(r.timestamp) === dataOntem).length;
+  if (total === 0) return null;
+  return { total, data: dataOntem };
 }
