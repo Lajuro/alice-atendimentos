@@ -6,6 +6,7 @@ import Onboarding from "./Onboarding";
 import WelcomeIntro from "./WelcomeIntro";
 import type { PerfilUsuario } from "@/lib/types";
 import { getPerfil, salvarPerfil, salvarConfig, getSidebarMinimized, salvarSidebarMinimized, getIntroHabilitada } from "@/lib/storage";
+import { verificarBackupPendente, iniciarLembretePausa, pararLembretePausa, resetarNotificacoesDiarias } from "@/lib/notifications";
 import { Smartphone, X } from "lucide-react";
 
 export default function ClientShell({ children }: { children: React.ReactNode }) {
@@ -88,6 +89,16 @@ export default function ClientShell({ children }: { children: React.ReactNode })
     if (loaded && perfil?.onboardingCompleto && !editandoPerfil && getIntroHabilitada()) {
       setShowIntro(true);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
+
+  // Initialize notifications (backup reminder, lunch reminder) after profile loads
+  useEffect(() => {
+    if (!loaded || !perfil?.onboardingCompleto) return;
+    resetarNotificacoesDiarias();
+    verificarBackupPendente();
+    iniciarLembretePausa();
+    return () => pararLembretePausa();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded]);
 

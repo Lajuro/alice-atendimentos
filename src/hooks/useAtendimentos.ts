@@ -12,6 +12,7 @@ import {
   atualizarNota as atualizarNotaStorage,
   getConfig,
   salvarConfig as salvarConfigStorage,
+  initStorage,
 } from "@/lib/storage";
 import { gerarDadosExemplo } from "@/lib/seed";
 
@@ -22,6 +23,14 @@ export function useAtendimentos() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    // Initialize IDB storage (async, non-blocking — data loads from localStorage meanwhile)
+    initStorage().then(() => {
+      // After IDB is ready, refresh to pick up any IDB-only data
+      setRegistros(getRegistros());
+      setTipos(getTipos());
+      setConfig(getConfig());
+    }).catch(() => {});
+
     let regs = getRegistros();
     if (regs.length === 0 && process.env.NEXT_PUBLIC_SEED_FAKE === "true") {
       regs = gerarDadosExemplo();

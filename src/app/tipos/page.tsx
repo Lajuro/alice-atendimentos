@@ -2,9 +2,11 @@
 
 import { useAtendimentos } from "@/hooks/useAtendimentos";
 import { TipoAtendimento } from "@/lib/types";
-import { getMeta, salvarMeta } from "@/lib/storage";
+import { getMeta, salvarMeta, getNotificacoesConfig, salvarNotificacoesConfig } from "@/lib/storage";
+import { pedirPermissao, getPermissaoAtual } from "@/lib/notifications";
 import { useState, useEffect } from "react";
-import { Target, Sparkles } from "lucide-react";
+import { Target, Sparkles, Bell } from "lucide-react";
+import type { NotificacoesConfig } from "@/lib/types";
 import { Select } from "@/components/ui/Select";
 import { NumberInput } from "@/components/ui/NumberInput";
 import { ColorPicker } from "@/components/ui/ColorPicker";
@@ -21,6 +23,8 @@ export default function ConfiguracoesPage() {
   const [horaFim, setHoraFim] = useState(config.horaFim);
   const [metaDiaria, setMetaDiaria] = useState(0);
   const [introHabilitada, setIntroHabilitada] = useState(true);
+  const [notifConfig, setNotifConfig] = useState<NotificacoesConfig>({ habilitadas: false, lembretePausa: true, metaDiaria: true, backupPendente: true });
+  const [notifPermissao, setNotifPermissao] = useState<NotificationPermission>("default");
 
   useEffect(() => {
     setHoraInicio(config.horaInicio);
@@ -30,6 +34,8 @@ export default function ConfiguracoesPage() {
   useEffect(() => {
     setMetaDiaria(getMeta().metaDiaria);
     setIntroHabilitada(getIntroHabilitada());
+    setNotifConfig(getNotificacoesConfig());
+    setNotifPermissao(getPermissaoAtual());
   }, []);
 
   if (!loaded) return null;
@@ -203,6 +209,82 @@ export default function ConfiguracoesPage() {
             />
           </button>
         </label>
+      </div>
+
+      {/* Notificações */}
+      <div className="bg-card border border-alice-gray-100 rounded-xl p-4 sm:p-5 space-y-3 sm:space-y-4">
+        <div>
+          <h2 className="text-base sm:text-lg font-bold inline-flex items-center gap-1.5">
+            <Bell className="w-4 h-4" />
+            Notificações
+          </h2>
+          <p className="text-alice-gray-400 text-xs sm:text-sm mt-0.5">
+            Receba lembretes e alertas sobre metas e pausas
+          </p>
+        </div>
+        {notifPermissao === "denied" && (
+          <p className="text-xs text-red-500">
+            Notificações estão bloqueadas no navegador. Permita nas configurações do site para usar este recurso.
+          </p>
+        )}
+        <label className="flex items-center justify-between gap-3 cursor-pointer">
+          <div>
+            <span className="text-sm font-medium">Ativar notificações</span>
+            <p className="text-[10px] sm:text-xs text-alice-gray-300 mt-0.5">
+              Permite enviar avisos locais (nenhum dado sai do dispositivo)
+            </p>
+          </div>
+          <button
+            role="switch"
+            aria-checked={notifConfig.habilitadas}
+            onClick={async () => {
+              const next = !notifConfig.habilitadas;
+              if (next && notifPermissao !== "granted") {
+                const perm = await pedirPermissao();
+                setNotifPermissao(perm);
+                if (perm !== "granted") return;
+              }
+              const updated = { ...notifConfig, habilitadas: next };
+              setNotifConfig(updated);
+              salvarNotificacoesConfig(updated);
+            }}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+              notifConfig.habilitadas ? "bg-alice-primary" : "bg-alice-gray-200"
+            }`}
+          >
+            <span className={`inline-block h-4.5 w-4.5 rounded-full bg-white shadow-sm transition-transform ${notifConfig.habilitadas ? "translate-x-5.5" : "translate-x-0.5"}`} />
+          </button>
+        </label>
+        {notifConfig.habilitadas && (
+          <>
+            {([
+              { key: "lembretePausa" as const, label: "Lembrete de pausa", desc: "Aviso na hora do almoço/janta configurada" },
+              { key: "metaDiaria" as const, label: "Progresso da meta", desc: "Notifica quando está perto e quando bate a meta" },
+              { key: "backupPendente" as const, label: "Backup pendente", desc: "Alerta semanal se não fez backup dos dados" },
+            ]).map(({ key, label, desc }) => (
+              <label key={key} className="flex items-center justify-between gap-3 cursor-pointer">
+                <div>
+                  <span className="text-sm font-medium">{label}</span>
+                  <p className="text-[10px] sm:text-xs text-alice-gray-300 mt-0.5">{desc}</p>
+                </div>
+                <button
+                  role="switch"
+                  aria-checked={notifConfig[key]}
+                  onClick={() => {
+                    const updated = { ...notifConfig, [key]: !notifConfig[key] };
+                    setNotifConfig(updated);
+                    salvarNotificacoesConfig(updated);
+                  }}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                    notifConfig[key] ? "bg-alice-primary" : "bg-alice-gray-200"
+                  }`}
+                >
+                  <span className={`inline-block h-4.5 w-4.5 rounded-full bg-white shadow-sm transition-transform ${notifConfig[key] ? "translate-x-5.5" : "translate-x-0.5"}`} />
+                </button>
+              </label>
+            ))}
+          </>
+        )}
       </div>
 
       {/* Tipos de atendimento */}

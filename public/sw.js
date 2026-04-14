@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-const CACHE_NAME = "alice-atendimentos-v1";
+const CACHE_NAME = "alice-atendimentos-v2";
 
 const PRECACHE_URLS = [
   "/",
@@ -9,6 +9,8 @@ const PRECACHE_URLS = [
   "/relatorios",
   "/tipos",
   "/dados",
+  "/conquistas",
+  "/insights",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -34,6 +36,28 @@ self.addEventListener("activate", (event) => {
     )
   );
   self.clients.claim();
+});
+
+// Notification click: open the app on the relevant route
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const tag = event.notification.tag || "";
+  let url = "/";
+  if (tag.startsWith("backup")) url = "/dados";
+  else if (tag.startsWith("meta")) url = "/";
+  else if (tag.startsWith("lembrete-pausa")) url = "/";
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if (client.url.includes(url) && "focus" in client) {
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(url);
+    })
+  );
 });
 
 // Fetch: network-first for navigation, cache-first for assets

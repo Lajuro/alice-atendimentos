@@ -3,10 +3,16 @@
 import { useAtendimentos } from "@/hooks/useAtendimentos";
 import { contarPorTipo, contarPorHora, getRegistrosDoDia, getRegistros, contarPorDia, getPerfil, getAlmocosDoDia, iniciarAlmoco, finalizarAlmoco, getMeta, calcularStreak, atualizarNota, getNotaDia, salvarNotaDia, getAlmocoOverrideDia, setAlmocoOverrideDia, removerAlmocoOverrideDia } from "@/lib/storage";
 import { type HorarioAlmoco, AVALIACOES, AVALIACAO_LABEL, type AvaliacaoEmoji } from "@/lib/types";
+import type { DefinicaoConquista } from "@/lib/types";
+import { processarNovasConquistas } from "@/lib/conquistas";
+import { compararComMediaHistorica } from "@/lib/insights";
+import { verificarMetaProxima } from "@/lib/notifications";
+import ConquistaToast from "@/components/ConquistaToast";
+import Link from "next/link";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
-import { ChartColumn, Check, Coffee, Flame, Frown, Keyboard, Meh, Smile, Sparkles, Star, StickyNote, Timer, X } from "lucide-react";
+import { ChartColumn, Check, Coffee, Flame, Frown, Keyboard, Meh, Smile, Sparkles, Star, StickyNote, Timer, TrendingUp, X } from "lucide-react";
 import { TimeInputSm } from "@/components/ui/TimeInput";
 
 export default function Home() {
@@ -40,6 +46,7 @@ export default function Home() {
   const [notaDiaTexto, setNotaDiaTexto] = useState("");
   const [notaDiaAvaliacao, setNotaDiaAvaliacao] = useState<AvaliacaoEmoji | undefined>(undefined);
   const [editandoNotaDia, setEditandoNotaDia] = useState(false);
+  const [novasConquistas, setNovasConquistas] = useState<DefinicaoConquista[]>([]);
 
   const registrosHoje = useMemo(() => {
     if (!loaded) return [];
@@ -149,6 +156,10 @@ export default function Home() {
     setTimeout(() => setPopId(null), 200);
     const tipo = tipos.find((t) => t.id === tipoId);
     if (tipo) showToast(`+1 ${tipo.nome}`);
+    // Check conquests & notifications after registration
+    const novas = processarNovasConquistas();
+    if (novas.length > 0) setNovasConquistas(novas);
+    verificarMetaProxima();
   }, [tipos, registrar, showToast]);
 
   const handleDesfazer = useCallback(() => {
@@ -248,6 +259,11 @@ export default function Home() {
         >
           {toast.msg}
         </div>
+      )}
+
+      {/* Conquista toast */}
+      {novasConquistas.length > 0 && (
+        <ConquistaToast conquistas={novasConquistas} onDone={() => setNovasConquistas([])} />
       )}
 
       {/* Header */}
@@ -606,6 +622,35 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Insights mini-card */}
+      {(() => {
+        const cmp = compararComMediaHistorica();
+        if (!cmp || (cmp.hoje === 0 && cmp.media === 0)) return null;
+        return (
+          <Link
+            href="/insights"
+            className="block bg-card rounded-xl border border-alice-gray-100 p-3 sm:p-4 hover:border-alice-primary/50 transition-colors group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-alice-primary" />
+                <span className="text-xs sm:text-sm font-semibold text-foreground">Seus Insights</span>
+              </div>
+              <svg className="w-4 h-4 text-alice-gray-300 group-hover:text-alice-primary transition-colors" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
+            </div>
+            <p className="text-xs text-alice-gray-400 mt-1">
+              {cmp.percentual > 0
+                ? `Hoje você está ${cmp.percentual}% acima da sua média (${cmp.media}/dia)`
+                : cmp.percentual < 0
+                ? `Hoje você está ${Math.abs(cmp.percentual)}% abaixo da sua média (${cmp.media}/dia)`
+                : `Hoje está na média (${cmp.media}/dia)`}
+            </p>
+          </Link>
+        );
+      })()}
 
       {/* Nota do Dia */}
       <div className="bg-card rounded-xl border border-alice-gray-100 p-3 sm:p-5 space-y-3">

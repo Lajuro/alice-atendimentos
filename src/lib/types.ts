@@ -78,3 +78,34 @@ export const TIPOS_PADRAO: TipoAtendimento[] = [
   { id: "sintomas", nome: "Sintomas", cor: "#10B981" },
   { id: "administrativo", nome: "Administrativo", cor: "#8B5CF6" },
 ];
+
+// --- Gamificação ---
+export type CategoriaConquista = "streak" | "volume" | "meta" | "exploracao" | "social";
+
+export interface DefinicaoConquista {
+  id: string;
+  titulo: string;
+  descricao: string;
+  icone: string; // emoji
+  categoria: CategoriaConquista;
+  xp: number;
+}
+
+export interface ConquistaDesbloqueada {
+  id: string;
+  desbloqueadaEm: string; // ISO string
+}
+
+export interface PerfilGamificacao {
+  xp: number;
+  nivel: number;
+  conquistasDesbloqueadas: string[]; // IDs
+}
+
+// --- Notificações ---
+export interface NotificacoesConfig {
+  habilitadas: boolean;
+  lembretePausa: boolean;
+  metaDiaria: boolean;
+  backupPendente: boolean;
+}

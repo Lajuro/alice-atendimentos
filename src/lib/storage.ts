@@ -1,8 +1,9 @@
 "use client";
 
 import { TipoAtendimento, RegistroAtendimento, RegistroAlmoco, Configuracao, PerfilUsuario, MetaConfig, CONFIG_PADRAO, META_PADRAO, TIPOS_PADRAO, NotaDia, AvaliacaoEmoji, HorarioAlmoco } from "./types";
+import { idbSet, idbDelete, migrateToIDB, loadCacheFromIDB, isIDBAvailable } from "./db";
 
-const STORAGE_KEYS = {
+export const STORAGE_KEYS = {
   TIPOS: "alice-tipos-atendimento",
   REGISTROS: "alice-registros",
   CONFIG: "alice-config",
@@ -14,13 +15,39 @@ const STORAGE_KEYS = {
   NOTAS_DIA: "alice-notas-dia",
   SIDEBAR_MINIMIZED: "alice-sidebar-minimized",
   INTRO_HABILITADA: "alice-intro-habilitada",
+  NOTIFICACOES_CONFIG: "alice-notificacoes-config",
+  CONQUISTAS: "alice-conquistas",
+  GAMIFICACAO: "alice-gamificacao",
 } as const;
+
+const ALL_STORAGE_KEYS = Object.values(STORAGE_KEYS);
+
+// --- In-memory cache for fast sync reads ---
+const cache = new Map<string, unknown>();
+let idbReady = false;
+
+/** Initialize IDB: migrate from localStorage then load cache. Call once on app start. */
+export async function initStorage(): Promise<void> {
+  if (typeof window === "undefined" || !isIDBAvailable()) return;
+  try {
+    await migrateToIDB(ALL_STORAGE_KEYS);
+    await loadCacheFromIDB(cache);
+    idbReady = true;
+  } catch {
+    // IDB unavailable — localStorage continues as source of truth
+  }
+}
 
 function getItem<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
+  // Check in-memory cache first
+  if (cache.has(key)) return cache.get(key) as T;
+  // Fall back to localStorage
   try {
     const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
+    const val = raw ? JSON.parse(raw) as T : fallback;
+    cache.set(key, val);
+    return val;
   } catch {
     return fallback;
   }
@@ -28,7 +55,10 @@ function getItem<T>(key: string, fallback: T): T {
 
 function setItem(key: string, value: unknown) {
   if (typeof window === "undefined") return;
+  cache.set(key, value);
   localStorage.setItem(key, JSON.stringify(value));
+  // Async write-through to IDB
+  if (idbReady) idbSet(key, value).catch(() => {});
 }
 
 function toLocalDateKey(timestamp: string): string {
@@ -310,11 +340,15 @@ interface BackupData {
   perfil: PerfilUsuario | null;
   almocos: RegistroAlmoco[];
   meta?: MetaConfig;
+  notasDia?: NotaDia[];
+  conquistas?: ConquistaDesbloqueada[];
+  gamificacao?: PerfilGamificacao;
+  almocoOverrides?: Record<string, HorarioAlmoco>;
 }
 
 export function exportarBackup(): BackupData {
   const backup: BackupData = {
-    versao: 1,
+    versao: 2,
     dataExportacao: new Date().toISOString(),
     tipos: getTipos(),
     registros: getRegistros(),
@@ -322,6 +356,10 @@ export function exportarBackup(): BackupData {
     perfil: getPerfil(),
     almocos: getAlmocos(),
     meta: getMeta(),
+    notasDia: getNotasDia(),
+    conquistas: getConquistasDesbloqueadas(),
+    gamificacao: getGamificacao(),
+    almocoOverrides: getAlmocoOverridesDia(),
   };
   registrarUltimoBackup();
   return backup;
@@ -348,6 +386,10 @@ export function restaurarBackup(backup: BackupData) {
   if (backup.perfil) salvarPerfil(backup.perfil);
   salvarAlmocos(backup.almocos);
   if (backup.meta) salvarMeta(backup.meta);
+  if (backup.notasDia) setItem(STORAGE_KEYS.NOTAS_DIA, backup.notasDia);
+  if (backup.conquistas) salvarConquistasDesbloqueadas(backup.conquistas);
+  if (backup.gamificacao) salvarGamificacao(backup.gamificacao);
+  if (backup.almocoOverrides) setItem(STORAGE_KEYS.ALMOCO_OVERRIDES, backup.almocoOverrides);
   registrarUltimoBackup();
 }
 
@@ -355,7 +397,10 @@ export function limparTodosOsDados() {
   if (typeof window === "undefined") return;
   for (const key of Object.values(STORAGE_KEYS)) {
     localStorage.removeItem(key);
+    if (idbReady) idbDelete(key).catch(() => {});
   }
+  cache.clear();
+  localStorage.removeItem("alice-migrated-idb");
 }
 
 // --- Último Backup ---
@@ -427,4 +472,40 @@ export function getResumoDiaAnterior(): { total: number; data: string } | null {
   const total = registros.filter((r) => toLocalDateKey(r.timestamp) === dataOntem).length;
   if (total === 0) return null;
   return { total, data: dataOntem };
+}
+
+// --- Conquistas / Gamificação ---
+import type { ConquistaDesbloqueada, PerfilGamificacao, NotificacoesConfig } from "./types";
+
+const GAMIFICACAO_PADRAO: PerfilGamificacao = { xp: 0, nivel: 1, conquistasDesbloqueadas: [] };
+const NOTIFICACOES_PADRAO: NotificacoesConfig = {
+  habilitadas: false,
+  lembretePausa: true,
+  metaDiaria: true,
+  backupPendente: true,
+};
+
+export function getGamificacao(): PerfilGamificacao {
+  return getItem(STORAGE_KEYS.GAMIFICACAO, GAMIFICACAO_PADRAO);
+}
+
+export function salvarGamificacao(g: PerfilGamificacao) {
+  setItem(STORAGE_KEYS.GAMIFICACAO, g);
+}
+
+export function getConquistasDesbloqueadas(): ConquistaDesbloqueada[] {
+  return getItem(STORAGE_KEYS.CONQUISTAS, []);
+}
+
+export function salvarConquistasDesbloqueadas(c: ConquistaDesbloqueada[]) {
+  setItem(STORAGE_KEYS.CONQUISTAS, c);
+}
+
+// --- Notificações Config ---
+export function getNotificacoesConfig(): NotificacoesConfig {
+  return getItem(STORAGE_KEYS.NOTIFICACOES_CONFIG, NOTIFICACOES_PADRAO);
+}
+
+export function salvarNotificacoesConfig(config: NotificacoesConfig) {
+  setItem(STORAGE_KEYS.NOTIFICACOES_CONFIG, config);
 }
