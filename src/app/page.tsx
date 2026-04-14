@@ -3,11 +3,10 @@
 import { useAtendimentos } from "@/hooks/useAtendimentos";
 import { contarPorTipo, contarPorHora, getRegistrosDoDia, getRegistros, contarPorDia, getPerfil, getAlmocosDoDia, iniciarAlmoco, finalizarAlmoco, getMeta, calcularStreak, atualizarNota, getNotaDia, salvarNotaDia, getAlmocoOverrideDia, setAlmocoOverrideDia, removerAlmocoOverrideDia } from "@/lib/storage";
 import { type HorarioAlmoco, AVALIACOES, AVALIACAO_LABEL, type AvaliacaoEmoji } from "@/lib/types";
-import type { DefinicaoConquista } from "@/lib/types";
-import { processarNovasConquistas } from "@/lib/conquistas";
+import { processarNovasConquistas, xpParaProximoNivel, getNomeNivel, CONQUISTAS_MAP } from "@/lib/conquistas";
+import { getGamificacao, getConquistasDesbloqueadas } from "@/lib/storage";
 import { compararComMediaHistorica } from "@/lib/insights";
 import { verificarMetaProxima } from "@/lib/notifications";
-import ConquistaToast from "@/components/ConquistaToast";
 import Link from "next/link";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -46,7 +45,25 @@ export default function Home() {
   const [notaDiaTexto, setNotaDiaTexto] = useState("");
   const [notaDiaAvaliacao, setNotaDiaAvaliacao] = useState<AvaliacaoEmoji | undefined>(undefined);
   const [editandoNotaDia, setEditandoNotaDia] = useState(false);
-  const [novasConquistas, setNovasConquistas] = useState<DefinicaoConquista[]>([]);
+
+  // Gamification state — updates in real-time via event
+  const [gamificacao, setGamificacao] = useState(() => loaded ? getGamificacao() : { xp: 0, nivel: 1, conquistasDesbloqueadas: [] });
+  const [ultimasConquistas, setUltimasConquistas] = useState(() => loaded ? getConquistasDesbloqueadas().slice(-3).reverse() : []);
+
+  useEffect(() => {
+    if (!loaded) return;
+    setGamificacao(getGamificacao());
+    setUltimasConquistas(getConquistasDesbloqueadas().slice(-3).reverse());
+  }, [loaded, tick]);
+
+  useEffect(() => {
+    const handler = () => {
+      setGamificacao(getGamificacao());
+      setUltimasConquistas(getConquistasDesbloqueadas().slice(-3).reverse());
+    };
+    window.addEventListener("conquistas-updated", handler);
+    return () => window.removeEventListener("conquistas-updated", handler);
+  }, []);
 
   const registrosHoje = useMemo(() => {
     if (!loaded) return [];
@@ -157,8 +174,7 @@ export default function Home() {
     const tipo = tipos.find((t) => t.id === tipoId);
     if (tipo) showToast(`+1 ${tipo.nome}`);
     // Check conquests & notifications after registration
-    const novas = processarNovasConquistas();
-    if (novas.length > 0) setNovasConquistas(novas);
+    processarNovasConquistas();
     verificarMetaProxima();
   }, [tipos, registrar, showToast]);
 
@@ -259,11 +275,6 @@ export default function Home() {
         >
           {toast.msg}
         </div>
-      )}
-
-      {/* Conquista toast */}
-      {novasConquistas.length > 0 && (
-        <ConquistaToast conquistas={novasConquistas} onDone={() => setNovasConquistas([])} />
       )}
 
       {/* Header */}
@@ -390,6 +401,59 @@ export default function Home() {
               : `Faltam ${metaDiaria - totalHoje} atendimento${metaDiaria - totalHoje !== 1 ? "s" : ""} para bater a meta`}
           </p>
         </div>
+      )}
+
+      {/* Badge / Level widget */}
+      {gamificacao.xp > 0 && (
+        <Link
+          href="/conquistas"
+          className="block bg-card rounded-xl border border-alice-gray-100 p-3 sm:p-4 hover:border-amber-400/50 transition-colors group"
+        >
+          <div className="flex items-center gap-3">
+            {/* Level badge */}
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-sm shrink-0">
+              {gamificacao.nivel}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <span className="text-xs sm:text-sm font-semibold text-foreground">
+                  {getNomeNivel(gamificacao.nivel)}
+                </span>
+                <span className="text-[10px] text-alice-gray-400">
+                  {gamificacao.xp} XP
+                </span>
+              </div>
+              {/* XP progress bar */}
+              {(() => {
+                const xpInfo = xpParaProximoNivel(gamificacao.xp);
+                return (
+                  <div className="h-1.5 bg-alice-gray-100 rounded-full overflow-hidden mt-1">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-500"
+                      style={{ width: `${Math.min(100, xpInfo.progresso * 100)}%` }}
+                    />
+                  </div>
+                );
+              })()}
+              {/* Recent badges */}
+              {ultimasConquistas.length > 0 && (
+                <div className="flex items-center gap-1 mt-1.5">
+                  {ultimasConquistas.map((c) => {
+                    const def = CONQUISTAS_MAP.get(c.id);
+                    return def ? (
+                      <span key={c.id} className="text-sm" title={def.titulo}>
+                        {def.icone}
+                      </span>
+                    ) : null;
+                  })}
+                  <span className="text-[10px] text-alice-gray-400 ml-1 group-hover:text-alice-primary transition-colors">
+                    Ver todas →
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </Link>
       )}
 
       {/* Botões de registro — grandes e fáceis de clicar */}

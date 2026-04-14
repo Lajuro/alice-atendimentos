@@ -9,6 +9,7 @@ import {
   getRegistros,
   getUltimoBackup,
 } from "@/lib/storage";
+import { processarNovasConquistas } from "@/lib/conquistas";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -36,6 +37,7 @@ export default function DadosPage() {
       a.click();
       URL.revokeObjectURL(url);
       setStatus({ tipo: "sucesso", msg: "Backup exportado com sucesso!" });
+      processarNovasConquistas();
     } catch {
       setStatus({ tipo: "erro", msg: "Erro ao exportar backup." });
     }

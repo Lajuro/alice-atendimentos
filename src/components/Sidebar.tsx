@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { PerfilUsuario } from "@/lib/types";
-import { diasDesdeUltimoBackup } from "@/lib/storage";
+import { diasDesdeUltimoBackup, getGamificacao } from "@/lib/storage";
+import { getNomeNivel } from "@/lib/conquistas";
 
 const NAV_ITEMS = [
   { href: "/", label: "Registrar", icon: PlusIcon },
@@ -47,6 +48,24 @@ export default function Sidebar({
   useEffect(() => {
     const dias = diasDesdeUltimoBackup();
     setBackupAlerta(dias === null || dias >= 7);
+  }, []);
+
+  // Gamification level — updates in real-time
+  const [nivel, setNivel] = useState(0);
+  const [nomeNivel, setNomeNivel] = useState("");
+  useEffect(() => {
+    const g = getGamificacao();
+    setNivel(g.nivel);
+    setNomeNivel(getNomeNivel(g.nivel));
+  }, []);
+  useEffect(() => {
+    const handler = () => {
+      const g = getGamificacao();
+      setNivel(g.nivel);
+      setNomeNivel(getNomeNivel(g.nivel));
+    };
+    window.addEventListener("conquistas-updated", handler);
+    return () => window.removeEventListener("conquistas-updated", handler);
   }, []);
 
   const width = minimized && !collapsed ? "w-16" : "w-64";
@@ -200,22 +219,40 @@ export default function Sidebar({
             }`}
           >
             {perfil.imagemBase64 ? (
-              <img
-                src={perfil.imagemBase64}
-                alt={perfil.nome}
-                className="w-8 h-8 rounded-full object-cover shrink-0"
-              />
+              <div className="relative shrink-0">
+                <img
+                  src={perfil.imagemBase64}
+                  alt={perfil.nome}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+                {nivel > 0 && (
+                  <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-[8px] font-bold text-white ring-1 ring-alice-black">
+                    {nivel}
+                  </span>
+                )}
+              </div>
             ) : (
-              <div className="w-8 h-8 rounded-full bg-alice-primary/30 flex items-center justify-center text-xs font-bold text-alice-primary shrink-0">
-                {perfil.nome.charAt(0).toUpperCase()}
+              <div className="relative shrink-0">
+                <div className="w-8 h-8 rounded-full bg-alice-primary/30 flex items-center justify-center text-xs font-bold text-alice-primary">
+                  {perfil.nome.charAt(0).toUpperCase()}
+                </div>
+                {nivel > 0 && (
+                  <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-[8px] font-bold text-white ring-1 ring-alice-black">
+                    {nivel}
+                  </span>
+                )}
               </div>
             )}
             {!(minimized && !collapsed) && (
               <div className="min-w-0 text-left">
                 <p className="text-sm font-medium text-white truncate">{perfil.nome}</p>
-                {perfil.profissao && (
+                {nivel > 0 ? (
+                  <p className="text-[10px] text-amber-400 truncate font-medium">
+                    Nv. {nivel} — {nomeNivel}
+                  </p>
+                ) : perfil.profissao ? (
                   <p className="text-[10px] text-alice-gray-400 truncate">{perfil.profissao}</p>
-                )}
+                ) : null}
               </div>
             )}
             {minimized && !collapsed && (

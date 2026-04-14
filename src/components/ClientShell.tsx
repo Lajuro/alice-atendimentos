@@ -4,7 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import Sidebar from "./Sidebar";
 import Onboarding from "./Onboarding";
 import WelcomeIntro from "./WelcomeIntro";
+import ConquistaToast from "./ConquistaToast";
 import type { PerfilUsuario } from "@/lib/types";
+import type { DefinicaoConquista } from "@/lib/types";
 import { getPerfil, salvarPerfil, salvarConfig, getSidebarMinimized, salvarSidebarMinimized, getIntroHabilitada } from "@/lib/storage";
 import { verificarBackupPendente, iniciarLembretePausa, pararLembretePausa, resetarNotificacoesDiarias } from "@/lib/notifications";
 import { Smartphone, X } from "lucide-react";
@@ -20,6 +22,7 @@ export default function ClientShell({ children }: { children: React.ReactNode })
   const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
+  const [novasConquistas, setNovasConquistas] = useState<DefinicaoConquista[]>([]);
 
   /* Register service worker & capture install prompt */
   useEffect(() => {
@@ -102,6 +105,16 @@ export default function ClientShell({ children }: { children: React.ReactNode })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded]);
 
+  // Listen for conquistas-updated event (fired from any page)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<DefinicaoConquista[]>).detail;
+      if (detail?.length > 0) setNovasConquistas(detail);
+    };
+    window.addEventListener("conquistas-updated", handler);
+    return () => window.removeEventListener("conquistas-updated", handler);
+  }, []);
+
   const toggleSidebar = useCallback(() => setSidebarOpen((o) => !o), []);
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const toggleMinimized = useCallback(() => setMinimized((m) => {
@@ -149,6 +162,10 @@ export default function ClientShell({ children }: { children: React.ReactNode })
     <>
       {showIntro && perfil && (
         <WelcomeIntro nome={perfil.nome} onDone={() => setShowIntro(false)} />
+      )}
+      {/* Global conquista toast — works on any page */}
+      {novasConquistas.length > 0 && (
+        <ConquistaToast conquistas={novasConquistas} onDone={() => setNovasConquistas([])} />
       )}
       {showOnboarding && (
         <Onboarding

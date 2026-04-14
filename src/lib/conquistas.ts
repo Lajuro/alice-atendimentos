@@ -33,7 +33,7 @@ export const CONQUISTAS: DefinicaoConquista[] = [
   { id: "meta-2x", titulo: "Dobro", descricao: "Registrar o dobro da meta em um dia", icone: "🚀", categoria: "meta", xp: 60 },
 
   // Exploração
-  { id: "exp-madrugador", titulo: "Madrugador", descricao: "Registrar atendimento antes das 7h", icone: "🌅", categoria: "exploracao", xp: 20 },
+  { id: "exp-madrugador", titulo: "Madrugador", descricao: "Registrar atendimento antes das 9h", icone: "🌅", categoria: "exploracao", xp: 20 },
   { id: "exp-coruja", titulo: "Coruja", descricao: "Registrar atendimento depois das 22h", icone: "🦉", categoria: "exploracao", xp: 20 },
   { id: "exp-diversificado", titulo: "Diversificado", descricao: "Usar todos os tipos de atendimento em um dia", icone: "🎨", categoria: "exploracao", xp: 40 },
   { id: "exp-primeiro", titulo: "Primeiro Passo", descricao: "Registrar seu primeiro atendimento", icone: "👣", categoria: "exploracao", xp: 10 },
@@ -41,7 +41,7 @@ export const CONQUISTAS: DefinicaoConquista[] = [
   // Social
   { id: "soc-backup", titulo: "Precavido", descricao: "Fazer o primeiro backup dos dados", icone: "💾", categoria: "social", xp: 20 },
   { id: "soc-organizado", titulo: "Organizado", descricao: "Criar 3 ou mais tipos personalizados", icone: "📋", categoria: "social", xp: 30 },
-  { id: "soc-maratonista", titulo: "Maratonista", descricao: "Trabalhar 10 horas em um dia (primeiro ao último registro)", icone: "🏃", categoria: "social", xp: 60 },
+  { id: "soc-maratonista", titulo: "Maratonista", descricao: "Trabalhar 8 horas em um dia (primeiro ao último registro)", icone: "🏃", categoria: "social", xp: 60 },
 ];
 
 export const CONQUISTAS_MAP = new Map(CONQUISTAS.map((c) => [c.id, c]));
@@ -162,7 +162,7 @@ export function verificarConquistas(): DefinicaoConquista[] {
 
   // Exploration badges
   const horasRegistros = registros.map((r) => new Date(r.timestamp).getHours());
-  check("exp-madrugador", horasRegistros.some((h) => h < 7));
+  check("exp-madrugador", horasRegistros.some((h) => h < 9));
   check("exp-coruja", horasRegistros.some((h) => h >= 22));
 
   // Diversified — all types used in one day
@@ -190,7 +190,7 @@ export function verificarConquistas(): DefinicaoConquista[] {
     if (registrosDia.length < 2) continue;
     const timestamps = registrosDia.map((r) => new Date(r.timestamp).getTime()).sort((a, b) => a - b);
     const spanHoras = (timestamps[timestamps.length - 1] - timestamps[0]) / (1000 * 60 * 60);
-    if (spanHoras >= 10) {
+    if (spanHoras >= 8) {
       check("soc-maratonista", true);
       break;
     }
@@ -222,6 +222,11 @@ export function processarNovasConquistas(): DefinicaoConquista[] {
   gamificacao.nivel = calcularNivel(gamificacao.xp);
   gamificacao.conquistasDesbloqueadas = desbloqueadas.map((c) => c.id);
   salvarGamificacao(gamificacao);
+
+  // Dispatch event so UI components update in real-time
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("conquistas-updated", { detail: novas }));
+  }
 
   return novas;
 }

@@ -4,6 +4,7 @@ import { useAtendimentos } from "@/hooks/useAtendimentos";
 import { TipoAtendimento } from "@/lib/types";
 import { getMeta, salvarMeta, getNotificacoesConfig, salvarNotificacoesConfig } from "@/lib/storage";
 import { pedirPermissao, getPermissaoAtual } from "@/lib/notifications";
+import { processarNovasConquistas } from "@/lib/conquistas";
 import { useState, useEffect } from "react";
 import { Target, Sparkles, Bell } from "lucide-react";
 import type { NotificacoesConfig } from "@/lib/types";
@@ -51,6 +52,7 @@ export default function ConfiguracoesPage() {
     setNovoNome("");
     setNovaCor("#BE0380");
     setShowNovo(false);
+    processarNovasConquistas();
   };
 
   const handleEditar = (id: string, nome: string, cor: string) => {
